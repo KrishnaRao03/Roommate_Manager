@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Add member{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h4 class="mb-1">Add member</h4>
+                <p class="text-muted small mb-4">
+                    Invite an existing user to <strong>{{ household.name }}</strong> using their email.
+                    They must already have an account.
+                </p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} mb-3">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Share percentage</label>
+                        {{ form.share_percentage }}
+                        <div class="form-text">
+                            Optional: how much of shared expenses this member usually pays (0–100).
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'household_detail' household.pk %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            Add member
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

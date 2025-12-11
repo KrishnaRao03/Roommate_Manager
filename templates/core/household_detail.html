@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}{{ household.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2 class="mb-0">{{ household.name }}</h2>
+        {% if household.address %}
+            <p class="text-muted mb-0">{{ household.address }}</p>
+        {% endif %}
+        <p class="text-muted small mt-1 mb-0">Join code: <code>{{ household.join_code }}</code></p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'add_member' household.pk %}" class="btn btn-outline-secondary btn-sm mb-2">
+            + Add member
+        </a>
+        <a href="{% url 'expense_create' household.pk %}" class="btn btn-primary btn-sm mb-2">
+            + Add expense
+        </a>
+        <a href="{% url 'chore_create' household.pk %}" class="btn btn-outline-primary btn-sm mb-2">
+            + Add chore
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small">My balance</h6>
+                <h3 class="mb-1">
+                    {% if my_balance > 0 %}
+                        <span class="text-success">+{{ my_balance|floatformat:2 }}</span>
+                    {% elif my_balance < 0 %}
+                        <span class="text-danger">{{ my_balance|floatformat:2 }}</span>
+                    {% else %}
+                        {{ my_balance|floatformat:2 }}
+                    {% endif %}
+                </h3>
+                <p class="text-muted small mb-1">
+                    Paid: {{ my_paid_total|floatformat:2 }} &nbsp;·&nbsp;
+                    My share: {{ my_share_total|floatformat:2 }}
+                </p>
+                <p class="text-muted small mb-0">
+                    Positive = others owe you. Negative = you owe others.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small mb-3">Members &amp; balances</h6>
+                {% if balances %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Member</th>
+                                    <th class="text-end">Paid</th>
+                                    <th class="text-end">Share</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in balances %}
+                                    <tr{% if b.membership == current_membership %} class="table-light"{% endif %}>
+                                        <td>
+                                            {{ b.membership.user.first_name|default:b.membership.user.username }}
+                                            {% if b.membership == current_membership %}
+                                                <span class="badge text-bg-secondary ms-1">You</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">{{ b.paid_total|floatformat:2 }}</td>
+                                        <td class="text-end">{{ b.share_total|floatformat:2 }}</td>
+                                        <td class="text-end">
+                                            {% if b.balance > 0 %}
+                                                <span class="text-success">+{{ b.balance|floatformat:2 }}</span>
+                                            {% elif b.balance < 0 %}
+                                                <span class="text-danger">{{ b.balance|floatformat:2 }}</span>
+                                            {% else %}
+                                                {{ b.balance|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No members yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Expenses</h5>
+                {% if expenses %}
+                    <ul class="list-group list-group-flush">
+                        {% for e in expenses %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ e.title }}</div>
+                                    <div class="text-muted small">
+                                        {{ e.date }} · Paid by {{ e.paid_by.user.first_name|default:e.paid_by.user.username }}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-semibold">{{ e.amount|floatformat:2 }}</div>
+                                    <div class="text-muted small">
+                                        Your share:
+                                        {% with share=e.expenseshare_set.all|dictsort:"member_id" %}
+                                        {% endwith %}
+                                        {# We'll just show my_share_total overall; per-expense share would need extra context #}
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No expenses yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">My chores</h5>
+                <h6 class="text-muted small mb-1">Pending</h6>
+                {% if my_chores_pending %}
+                    <ul class="list-group list-group-flush mb-3">
+                        {% for c in my_chores_pending %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ c.title }}</div>
+                                    <div class="text-muted small">
+                                        Due {{ c.due_date }} · {{ c.get_frequency_display }}
+                                    </div>
+                                </div>
+                                <a href="{% url 'chore_toggle_status' c.pk %}" class="btn btn-sm btn-outline-primary">
+                                    Mark done
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted small mb-3">No pending chores assigned to you.</p>
+                {% endif %}
+
+                <h6 class="text-muted small mb-1">Completed</h6>
+                {% if my_chores_completed %}
+                    <ul class="list-group list-group-flush">
+                        {% for c in my_chores_completed %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ c.title }}</div>
+                                    <div class="text-muted small">
+                                        Completed · {{ c.due_date }} · {{ c.get_frequency_display }}
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted small mb-0">You haven't completed any chores yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
